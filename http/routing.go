@@ -2,14 +2,17 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/swaggo/files"
 )
 
 
 func NewRoute(g *gin.Engine, getall GetAllP) {
-	tracing := otelgin.Middleware("main service")
-	g.Use(tracing)
-	router := g.Group("p")
+
+	if gin.Mode() != gin.ReleaseMode {
+		g.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
+	router := g.Group("/p")
 	{
 		router.GET("/getAll", getall.Exec)
 	}

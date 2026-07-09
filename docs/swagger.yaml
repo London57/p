@@ -1,0 +1,34 @@
+definitions:
+  datagen.P:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      num:
+        type: number
+    type: object
+info:
+  contact: {}
+paths:
+  /p/getAll:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/datagen.P'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get All Ps
+      tags:
+      - P
+swagger: "2.0"

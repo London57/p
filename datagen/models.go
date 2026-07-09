@@ -11,7 +11,7 @@ import (
 )
 
 type P struct {
-	ID   uuid.UUID
+	ID   uuid.UUID 
 	Name string
-	Num  sql.NullString
+	Num  sql.NullString `swaggertype:"number"`
 }

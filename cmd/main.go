@@ -8,11 +8,13 @@ import (
 	"syscall"
 
 	"github.com/London57/gsqlc/datagen"
+	_ "github.com/London57/gsqlc/docs"
 	h "github.com/London57/gsqlc/http"
 	"github.com/London57/gsqlc/postgres"
 	"github.com/London57/gsqlc/server"
 	"github.com/London57/gsqlc/service/p"
 	tracer "github.com/London57/gsqlc/tracing"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 func main() {
@@ -20,6 +22,7 @@ func main() {
 	tp := tracer.InitTracer()
 	defer tp.Shutdown(context.Background())
 
+	
 	// db
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_NAME"))
 	ctx := context.Background()
@@ -28,8 +31,10 @@ func main() {
 	defer postgr.Close()
 
 	// server
-	srv := server.NewServ("localhost:8081")
+	srv := server.NewServ(":8080")
 	srv.HttpServer.Handler = srv.App
+	
+	srv.App.Use(otelgin.Middleware("main-service", otelgin.WithTracerProvider(tp)))
 	
 	hand := h.GetAllP{}.New(
 		p.GetAll{}.New(

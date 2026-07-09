@@ -18,7 +18,7 @@ func NewServ(addr string) *Serv {
 		HttpServer: &http.Server{
 			Addr: addr,
 		},
-		App: &gin.Engine{},
+		App: gin.Default(),
 	}
 }  
 
