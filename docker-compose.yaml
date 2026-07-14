@@ -25,29 +25,70 @@ services:
     image: migrate/migrate:v4.19.1
     volumes: 
       - ${PROJECT_ROOT}/postgres/migrations:/migrations
-      
+  
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:nightly
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    ports:
+      - 4317:4317
+    volumes:
+      - ./tracing/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    depends_on:
+      elasticsearch:
+        condition: service_started
+
   app:
     build: .
     ports:
       - 8080:8080
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
       - DB_USER=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_NAME=${POSTGRES_DB}
       - DB_HOST=postgres
       - DB_PORT=5432
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=p-app
     depends_on:
       postgres:
         condition: service_healthy
-      jaeger:
+      otel-collector:
         condition: service_started
+      # jaeger:
+      #   condition: service_started
     
-  jaeger:
-    image: jaegertracing/all-in-one:latest
-    ports: 
-      - "16686:16686"
-      - "4317:4317"
+
+  # jaeger:
+  #   image: jaegertracing/all-in-one:latest
+  #   ports: 
+  #     - "16686:16686"
+  #     - "4317:4317"
+  #   depends_on:
+  #     otel-collector:
+  #       condition: service_started
+    
+    
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:9.4.3
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms2g -Xmx2g
+    ports:
+      - 9200:9200
+      - 9300:9300
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+  
+  kibana:
+    image: docker.elastic.co/kibana/kibana-wolfi:9.4.3
+    volumes:
+      - ./kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
 
 volumes:
   postgres_data:
+  elasticsearch_data:

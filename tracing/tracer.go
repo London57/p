@@ -12,7 +12,6 @@ import (
 )
 
 func InitTracer() *tracesdk.TracerProvider {
-    // Только базовая инициализация
     exporter, _ := otlptracegrpc.New(context.Background())
     res, _ := resource.New(context.Background(),
         resource.WithAttributes(semconv.ServiceNameKey.String("main service")),
