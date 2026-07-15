@@ -9,7 +9,8 @@ import (
 
 	"github.com/London57/gsqlc/datagen"
 	_ "github.com/London57/gsqlc/docs"
-	h "github.com/London57/gsqlc/http"
+	handlers "github.com/London57/gsqlc/http/handlers"
+	router "github.com/London57/gsqlc/http"
 	"github.com/London57/gsqlc/postgres"
 	"github.com/London57/gsqlc/server"
 	"github.com/London57/gsqlc/service/p"
@@ -18,10 +19,16 @@ import (
 )
 
 func main() {
+
+	// server
+	srv := server.NewServ(":8080")
+	srv.HttpServer.Handler = srv.App
+
 	// tracing
 	tp := tracer.InitTracer()
 	defer tp.Shutdown(context.Background())
 
+	srv.App.Use(otelgin.Middleware("main-service", otelgin.WithTracerProvider(tp)))
 	
 	// db
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_NAME"))
@@ -30,21 +37,20 @@ func main() {
 	postgr := postgres.InitPostgresWithTracing(ctx, dsn)
 	defer postgr.Close()
 
-	// server
-	srv := server.NewServ(":8080")
-	srv.HttpServer.Handler = srv.App
-	
-	srv.App.Use(otelgin.Middleware("main-service", otelgin.WithTracerProvider(tp)))
-	
-	hand := h.GetAllP{}.New(
-		p.GetAll{}.New(
-			*datagen.New(postgr),
-		),
+	db := datagen.New(postgr)
+
+	// http
+	getall := handlers.GetAllP{}.New(
+		pservice.GetAll{}.New(*db),
 	)
-	h.NewRoute(srv.App, hand)
+	insertone := handlers.InsertOneP{}.New(
+		pservice.InsertOne{}.New(*db),
+	)
+	router.NewRoute(srv.App, getall, insertone)
 
 	err_ch := srv.Run()
 
+	// graceful shutdown
 	interrupt := make(chan os.Signal, 1)
 	signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)	
 	

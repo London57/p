@@ -8,10 +8,10 @@ import (
 )
 
 type GetAllP struct {
-	service p.GetAll
+	service pservice.GetAll
 }
 
-func (GetAllP) New(service p.GetAll) GetAllP {
+func (GetAllP) New(service pservice.GetAll) GetAllP {
 	return GetAllP{
 		service: service,
 	}
@@ -22,12 +22,14 @@ func (GetAllP) New(service p.GetAll) GetAllP {
 // @Accept json
 // @Produce json
 // @Success 200 {object} []datagen.P
-// @Failure 500 {string} string "Internal Server Error"
+// @Success 200 {string} string "no p yet" "Empty list"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /p/getAll [get]
 func (h *GetAllP) Exec(c *gin.Context) {
 	ps, err := h.service.Exec(c.Request.Context())
 	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
 	}
 	if ps == nil {
 		c.JSON(http.StatusOK, "no p yet")

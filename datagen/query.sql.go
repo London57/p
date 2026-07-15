@@ -13,7 +13,7 @@ import (
 )
 
 const getAllP = `-- name: GetAllP :many
-select id, name, num from p
+SELECT id, name, num FROM p
 `
 
 func (q *Queries) GetAllP(ctx context.Context) ([]P, error) {
@@ -51,8 +51,26 @@ func (q *Queries) GetOneP(ctx context.Context, id uuid.UUID) (P, error) {
 	return i, err
 }
 
+const insertOneP = `-- name: InsertOneP :one
+INSERT INTO p (name, num)
+VALUES ($1, $2)
+RETURNING id, name, num
+`
+
+type InsertOnePParams struct {
+	Name string
+	Num  sql.NullString
+}
+
+func (q *Queries) InsertOneP(ctx context.Context, arg InsertOnePParams) (P, error) {
+	row := q.db.QueryRowContext(ctx, insertOneP, arg.Name, arg.Num)
+	var i P
+	err := row.Scan(&i.ID, &i.Name, &i.Num)
+	return i, err
+}
+
 const updateOneP = `-- name: UpdateOneP :one
-UPDATE p set
+UPDATE p SET
     name = COALESCE($1, name),
     num = COALESCE($2, num)
 WHERE id = $3
